@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Home, Users, Trophy, Radio, User, Menu, X } from "lucide-react";
+import { Home, Users, Trophy, Radio, User, Menu, X, Plus, LogOut } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
 
 const Navigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
+  const { user, logout } = useAuth();
 
   const navItems = [
     { icon: Home, label: "Inicio", path: "/" },
@@ -24,10 +26,10 @@ const Navigation = () => {
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between w-full">
           <div className="flex items-center space-x-2">
             <div className="w-10 h-10 bg-gradient-primary rounded-lg flex items-center justify-center font-heading font-bold text-white text-xl music-glow">
-              L
+              M
             </div>
             <span className="font-heading font-bold text-2xl bg-gradient-primary bg-clip-text text-transparent">
-              Lobevol
+              Musical Art
             </span>
           </div>
 
@@ -47,12 +49,34 @@ const Navigation = () => {
           </div>
 
           <div className="flex items-center space-x-2">
-            <Button variant="artist" size="sm">
-              Iniciar Sesión
-            </Button>
-            <Button variant="accent" size="sm">
-              Registrarse
-            </Button>
+            {user ? (
+              <>
+                <Link to="/create">
+                  <Button variant="artist" size="sm">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Crear
+                  </Button>
+                </Link>
+                <span className="text-sm text-muted-foreground">Hola, {user.name}</span>
+                <Button variant="ghost" size="sm" onClick={logout}>
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Salir
+                </Button>
+              </>
+            ) : (
+              <>
+                <Link to="/login">
+                  <Button variant="artist" size="sm">
+                    Iniciar Sesión
+                  </Button>
+                </Link>
+                <Link to="/register">
+                  <Button variant="accent" size="sm">
+                    Registrarse
+                  </Button>
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </nav>
@@ -62,10 +86,10 @@ const Navigation = () => {
         <div className="px-4 py-3 flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center font-heading font-bold text-white text-lg">
-              L
+              M
             </div>
             <span className="font-heading font-bold text-xl bg-gradient-primary bg-clip-text text-transparent">
-              Lobevol
+              Musical Art
             </span>
           </div>
 
@@ -100,12 +124,36 @@ const Navigation = () => {
               ))}
               
               <div className="pt-4 space-y-2">
-                <Button variant="artist" size="lg" className="w-full">
-                  Iniciar Sesión
-                </Button>
-                <Button variant="accent" size="lg" className="w-full">
-                  Registrarse
-                </Button>
+                {user ? (
+                  <>
+                    <Link to="/create" onClick={() => setIsMenuOpen(false)}>
+                      <Button variant="artist" size="lg" className="w-full">
+                        <Plus className="w-4 h-4 mr-2" />
+                        Crear Contenido
+                      </Button>
+                    </Link>
+                    <div className="text-center text-sm text-muted-foreground py-2">
+                      Hola, {user.name}
+                    </div>
+                    <Button variant="ghost" size="lg" className="w-full" onClick={logout}>
+                      <LogOut className="w-4 h-4 mr-2" />
+                      Cerrar Sesión
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Link to="/login" onClick={() => setIsMenuOpen(false)}>
+                      <Button variant="artist" size="lg" className="w-full">
+                        Iniciar Sesión
+                      </Button>
+                    </Link>
+                    <Link to="/register" onClick={() => setIsMenuOpen(false)}>
+                      <Button variant="accent" size="lg" className="w-full">
+                        Registrarse
+                      </Button>
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
           </div>

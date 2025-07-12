@@ -1,368 +1,225 @@
 import Navigation from "@/components/Navigation";
-import Footer from "@/components/Footer";
-import { Card } from "@/components/ui/card";
+import { useAuth } from "@/context/AuthContext";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, Music, Trophy, Users, Heart, Play, Crown, Star, Instagram, Twitter, Youtube } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Link } from "react-router-dom";
+import { Heart, MessageCircle, Calendar, Users, UserPlus, Image, Video, Link as LinkIcon, Plus } from "lucide-react";
 
 const Profile = () => {
-  const profileData = {
-    name: "Alex Rivera",
-    artistName: "AlexBeats",
-    username: "@alexbeats",
-    bio: "Productor musical especializado en Electronic y Hip Hop. Creando beats únicos desde 2020. Ganador de 3 competencias en Lobevol.",
-    location: "Ciudad de México, México",
-    joinedDate: "Marzo 2023",
-    verified: true,
-    stats: {
-      followers: 15420,
-      following: 342,
-      likes: 89750,
-      streams: 234567
-    },
-    achievements: [
-      { icon: Crown, title: "Rey del Beat", description: "Ganador de 5 competencias", color: "music-action" },
-      { icon: Star, title: "Rising Star", description: "10K+ seguidores", color: "music-primary" },
-      { icon: Heart, title: "Fan Favorite", description: "50K+ likes totales", color: "music-accent" },
-      { icon: Trophy, title: "Champion", description: "Top 3 en ranking", color: "music-action" }
-    ]
+  const { user, getUserPosts } = useAuth();
+  const userPosts = user ? getUserPosts(user.id) : [];
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <div className="container mx-auto px-4 py-8">
+          <Card className="max-w-md mx-auto">
+            <CardContent className="text-center p-6">
+              <h2 className="text-lg font-semibold mb-2">Acceso requerido</h2>
+              <p className="text-muted-foreground mb-4">
+                Debes iniciar sesión para ver tu perfil.
+              </p>
+              <Link to="/login">
+                <Button>Iniciar Sesión</Button>
+              </Link>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  const getPostIcon = (type: string) => {
+    switch (type) {
+      case 'image':
+        return <Image className="h-4 w-4" />;
+      case 'video':
+        return <Video className="h-4 w-4" />;
+      case 'link':
+        return <LinkIcon className="h-4 w-4" />;
+      default:
+        return null;
+    }
   };
 
-  const musicTracks = [
-    {
-      id: 1,
-      title: "Urban Nights",
-      genre: "Hip Hop",
-      duration: "3:42",
-      plays: 12540,
-      likes: 890,
-      releaseDate: "2024-01-15"
-    },
-    {
-      id: 2,
-      title: "Electronic Dreams",
-      genre: "Electronic",
-      duration: "4:18",
-      plays: 8720,
-      likes: 643,
-      releaseDate: "2024-01-10"
-    },
-    {
-      id: 3,
-      title: "Midnight Vibes",
-      genre: "Chill",
-      duration: "5:23",
-      plays: 15680,
-      likes: 1240,
-      releaseDate: "2023-12-28"
-    }
-  ];
-
-  const competitionHistory = [
-    {
-      id: 1,
-      name: "Hip Hop Battle #125",
-      position: 1,
-      prize: "$500",
-      date: "2024-01-20",
-      participants: 12
-    },
-    {
-      id: 2,
-      name: "Electronic Showcase",
-      position: 2,
-      prize: "$300",
-      date: "2024-01-15",
-      participants: 8
-    },
-    {
-      id: 3,
-      name: "Beat Making Challenge",
-      position: 1,
-      prize: "$750",
-      date: "2024-01-10",
-      participants: 15
-    }
-  ];
-
-  const getPositionBadge = (position: number) => {
-    switch (position) {
-      case 1: return { text: "🥇 1er Lugar", color: "bg-music-action text-white" };
-      case 2: return { text: "🥈 2do Lugar", color: "bg-music-accent text-background" };
-      case 3: return { text: "🥉 3er Lugar", color: "bg-music-primary text-white" };
-      default: return { text: `#${position}`, color: "bg-muted text-muted-foreground" };
-    }
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('es-ES', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
   };
 
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
-      
-      <main className="max-w-6xl mx-auto px-4 py-8">
-        {/* Profile Header */}
-        <Card className="p-8 mb-8 bg-card/50 backdrop-blur-sm border-border relative overflow-hidden">
-          {/* Background Pattern */}
-          <div className="absolute inset-0 bg-gradient-glow opacity-20"></div>
-          
-          <div className="relative z-10">
-            <div className="flex flex-col md:flex-row items-start md:items-center space-y-6 md:space-y-0 md:space-x-8">
-              {/* Avatar */}
-              <div className="relative">
-                <div className="w-32 h-32 bg-gradient-primary rounded-full flex items-center justify-center text-white text-4xl font-bold music-glow">
-                  AR
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-4xl mx-auto space-y-6">
+          {/* Profile Header */}
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex flex-col md:flex-row gap-6">
+                <div className="flex-shrink-0">
+                  <Avatar className="h-24 w-24">
+                    <AvatarImage src={user.avatar} alt={user.name} />
+                    <AvatarFallback className="text-xl">
+                      {user.name.split(' ').map(n => n[0]).join('')}
+                    </AvatarFallback>
+                  </Avatar>
                 </div>
-                {profileData.verified && (
-                  <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-music-accent rounded-full flex items-center justify-center">
-                    <Crown className="w-5 h-5 text-background" />
-                  </div>
-                )}
-              </div>
-
-              {/* Profile Info */}
-              <div className="flex-1 space-y-4">
-                <div>
-                  <div className="flex items-center space-x-3 mb-2">
-                    <h1 className="font-heading font-bold text-3xl">{profileData.artistName}</h1>
-                    {profileData.verified && (
-                      <Badge className="bg-music-accent text-background">
-                        Verificado ✓
-                      </Badge>
+                
+                <div className="flex-1 space-y-4">
+                  <div>
+                    <h1 className="text-2xl font-bold">{user.name}</h1>
+                    <p className="text-muted-foreground">@{user.username}</p>
+                    {user.bio && (
+                      <p className="mt-2 text-sm">{user.bio}</p>
                     )}
                   </div>
-                  <p className="text-xl text-muted-foreground">{profileData.name}</p>
-                  <p className="text-music-primary">{profileData.username}</p>
-                </div>
-
-                <p className="text-muted-foreground leading-relaxed max-w-2xl">{profileData.bio}</p>
-
-                <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-                  <span>📍 {profileData.location}</span>
-                  <span>📅 Miembro desde {profileData.joinedDate}</span>
-                </div>
-
-                {/* Stats */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-music-primary">{profileData.stats.followers.toLocaleString()}</div>
-                    <div className="text-sm text-muted-foreground">Seguidores</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-music-accent">{profileData.stats.following.toLocaleString()}</div>
-                    <div className="text-sm text-muted-foreground">Siguiendo</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-music-action">{profileData.stats.likes.toLocaleString()}</div>
-                    <div className="text-sm text-muted-foreground">Likes</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-music-primary">{profileData.stats.streams.toLocaleString()}</div>
-                    <div className="text-sm text-muted-foreground">Reproducciones</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="flex flex-col space-y-3">
-                <Button variant="musical" className="hover-glow">
-                  <Users className="w-4 h-4 mr-2" />
-                  Seguir
-                </Button>
-                <Button variant="accent" className="hover-glow">
-                  <Heart className="w-4 h-4 mr-2" />
-                  Apoyar
-                </Button>
-                <Button variant="ghost">
-                  <Settings className="w-4 h-4 mr-2" />
-                  Editar
-                </Button>
-              </div>
-            </div>
-          </div>
-        </Card>
-
-        {/* Social Links */}
-        <Card className="p-4 mb-8 bg-card/50 backdrop-blur-sm border-border">
-          <div className="flex justify-center space-x-4">
-            <Button variant="ghost" size="sm" className="hover:text-music-primary">
-              <Instagram className="w-4 h-4 mr-2" />
-              Instagram
-            </Button>
-            <Button variant="ghost" size="sm" className="hover:text-music-accent">
-              <Twitter className="w-4 h-4 mr-2" />
-              Twitter
-            </Button>
-            <Button variant="ghost" size="sm" className="hover:text-music-action">
-              <Youtube className="w-4 h-4 mr-2" />
-              YouTube
-            </Button>
-          </div>
-        </Card>
-
-        {/* Achievements */}
-        <Card className="p-6 mb-8 bg-card/50 backdrop-blur-sm border-border">
-          <h2 className="font-heading font-bold text-2xl mb-6 flex items-center">
-            <Trophy className="w-6 h-6 text-music-action mr-3" />
-            Logros y Reconocimientos
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {profileData.achievements.map((achievement, index) => (
-              <div key={index} className={`p-4 rounded-lg bg-${achievement.color}/10 border border-${achievement.color}/20 text-center space-y-3 hover:scale-105 transition-transform duration-300`}>
-                <achievement.icon className={`w-8 h-8 text-${achievement.color} mx-auto`} />
-                <div>
-                  <h3 className="font-semibold">{achievement.title}</h3>
-                  <p className="text-sm text-muted-foreground">{achievement.description}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
-
-        {/* Content Tabs */}
-        <Tabs defaultValue="music" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 bg-card/50 backdrop-blur-sm">
-            <TabsTrigger value="music" className="data-[state=active]:bg-music-primary data-[state=active]:text-white">
-              <Music className="w-4 h-4 mr-2" />
-              Mi Música
-            </TabsTrigger>
-            <TabsTrigger value="competitions" className="data-[state=active]:bg-music-accent data-[state=active]:text-background">
-              <Trophy className="w-4 h-4 mr-2" />
-              Competencias
-            </TabsTrigger>
-            <TabsTrigger value="activity" className="data-[state=active]:bg-music-action data-[state=active]:text-white">
-              <Star className="w-4 h-4 mr-2" />
-              Actividad
-            </TabsTrigger>
-          </TabsList>
-
-          {/* Music Tab */}
-          <TabsContent value="music" className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="font-heading font-bold text-xl">Mis Pistas</h3>
-              <Button variant="musical">
-                <Music className="w-4 h-4 mr-2" />
-                Subir Nueva Pista
-              </Button>
-            </div>
-            
-            <div className="grid grid-cols-1 gap-4">
-              {musicTracks.map((track) => (
-                <Card key={track.id} className="p-4 bg-card/50 backdrop-blur-sm border-border hover:border-music-primary/40 transition-all duration-300">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <div className="w-12 h-12 bg-music-primary/20 rounded-lg flex items-center justify-center">
-                        <Music className="w-6 h-6 text-music-primary" />
-                      </div>
-                      <div>
-                        <h4 className="font-semibold">{track.title}</h4>
-                        <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                          <Badge variant="secondary">{track.genre}</Badge>
-                          <span>•</span>
-                          <span>{track.duration}</span>
-                          <span>•</span>
-                          <span>{track.releaseDate}</span>
-                        </div>
-                      </div>
+                  
+                  <div className="flex gap-4 text-sm">
+                    <div className="flex items-center gap-1">
+                      <Users className="h-4 w-4" />
+                      <span className="font-semibold">{user.followers}</span>
+                      <span className="text-muted-foreground">seguidores</span>
                     </div>
-                    
-                    <div className="flex items-center space-x-6">
-                      <div className="text-center">
-                        <div className="text-lg font-bold text-music-accent">{track.plays.toLocaleString()}</div>
-                        <div className="text-xs text-muted-foreground">Reproducciones</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-lg font-bold text-music-action">{track.likes}</div>
-                        <div className="text-xs text-muted-foreground">Likes</div>
-                      </div>
-                      <Button variant="musical" size="sm">
-                        <Play className="w-4 h-4 mr-2" />
-                        Reproducir
-                      </Button>
+                    <div className="flex items-center gap-1">
+                      <UserPlus className="h-4 w-4" />
+                      <span className="font-semibold">{user.following}</span>
+                      <span className="text-muted-foreground">siguiendo</span>
                     </div>
                   </div>
-                </Card>
-              ))}
-            </div>
-          </TabsContent>
+                </div>
+                
+                <div className="flex flex-col gap-2">
+                  <Link to="/create">
+                    <Button className="w-full">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Crear Contenido
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-          {/* Competitions Tab */}
-          <TabsContent value="competitions" className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="font-heading font-bold text-xl">Historial de Competencias</h3>
-              <Button variant="accent">
-                <Trophy className="w-4 h-4 mr-2" />
-                Ver Competencias Activas
-              </Button>
+          {/* Posts Section */}
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold">Mis Publicaciones</h2>
+              <Badge variant="secondary">{userPosts.length} posts</Badge>
             </div>
             
-            <div className="grid grid-cols-1 gap-4">
-              {competitionHistory.map((competition) => {
-                const badge = getPositionBadge(competition.position);
-                return (
-                  <Card key={competition.id} className="p-4 bg-card/50 backdrop-blur-sm border-border">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
-                        <div className="w-12 h-12 bg-music-accent/20 rounded-lg flex items-center justify-center">
-                          <Trophy className="w-6 h-6 text-music-accent" />
-                        </div>
-                        <div>
-                          <h4 className="font-semibold">{competition.name}</h4>
-                          <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                            <span>{competition.participants} participantes</span>
-                            <span>•</span>
-                            <span>{competition.date}</span>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center space-x-4">
-                        <div className="text-center">
-                          <div className="text-lg font-bold text-music-action">{competition.prize}</div>
-                          <div className="text-xs text-muted-foreground">Premio</div>
-                        </div>
-                        <Badge className={badge.color}>
-                          {badge.text}
+            {userPosts.length === 0 ? (
+              <Card>
+                <CardContent className="text-center p-8">
+                  <div className="mb-4">
+                    <Image className="h-12 w-12 mx-auto text-muted-foreground" />
+                  </div>
+                  <h3 className="text-lg font-semibold mb-2">No has publicado nada aún</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Comparte tu música con la comunidad de Musical Art
+                  </p>
+                  <Link to="/create">
+                    <Button>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Crear tu primer post
+                    </Button>
+                  </Link>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2">
+                {userPosts.map((post) => (
+                  <Card key={post.id} className="overflow-hidden">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-lg">{post.title}</CardTitle>
+                        <Badge variant="outline" className="flex items-center gap-1">
+                          {getPostIcon(post.type)}
+                          {post.type}
                         </Badge>
                       </div>
-                    </div>
+                      {post.description && (
+                        <CardDescription>{post.description}</CardDescription>
+                      )}
+                    </CardHeader>
+                    
+                    <CardContent className="space-y-4">
+                      {post.type === 'image' && (
+                        <div className="relative overflow-hidden rounded-lg">
+                          <img 
+                            src={post.content} 
+                            alt={post.title}
+                            className="w-full h-48 object-cover"
+                            onError={(e) => {
+                              e.currentTarget.src = 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=300&fit=crop';
+                            }}
+                          />
+                        </div>
+                      )}
+                      
+                      {post.type === 'video' && (
+                        <div className="bg-muted rounded-lg p-6 text-center">
+                          <Video className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                          <p className="text-sm text-muted-foreground">Video: {post.content}</p>
+                        </div>
+                      )}
+                      
+                      {post.type === 'link' && (
+                        <div className="border rounded-lg p-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            <LinkIcon className="h-4 w-4" />
+                            <span className="font-medium">Enlace</span>
+                          </div>
+                          <a 
+                            href={post.content} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-primary hover:underline text-sm break-all"
+                          >
+                            {post.content}
+                          </a>
+                        </div>
+                      )}
+                      
+                      {post.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {post.tags.map((tag, index) => (
+                            <Badge key={index} variant="secondary" className="text-xs">
+                              #{tag}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                      
+                      <div className="flex items-center justify-between text-sm text-muted-foreground">
+                        <div className="flex items-center gap-4">
+                          <div className="flex items-center gap-1">
+                            <Heart className="h-4 w-4" />
+                            <span>{post.likes}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <MessageCircle className="h-4 w-4" />
+                            <span>{post.comments}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Calendar className="h-4 w-4" />
+                          <span>{formatDate(post.createdAt)}</span>
+                        </div>
+                      </div>
+                    </CardContent>
                   </Card>
-                );
-              })}
-            </div>
-          </TabsContent>
-
-          {/* Activity Tab */}
-          <TabsContent value="activity" className="space-y-4">
-            <h3 className="font-heading font-bold text-xl">Actividad Reciente</h3>
-            <div className="space-y-4">
-              <Card className="p-4 bg-card/50 backdrop-blur-sm border-border">
-                <p className="text-sm">
-                  <span className="font-semibold">AlexBeats</span> ganó la competencia 
-                  <span className="text-music-action font-semibold"> Hip Hop Battle #125</span>
-                  <span className="text-muted-foreground"> • hace 2 días</span>
-                </p>
-              </Card>
-              <Card className="p-4 bg-card/50 backdrop-blur-sm border-border">
-                <p className="text-sm">
-                  <span className="font-semibold">AlexBeats</span> subió una nueva pista:
-                  <span className="text-music-primary font-semibold"> "Urban Nights"</span>
-                  <span className="text-muted-foreground"> • hace 1 semana</span>
-                </p>
-              </Card>
-              <Card className="p-4 bg-card/50 backdrop-blur-sm border-border">
-                <p className="text-sm">
-                  <span className="font-semibold">AlexBeats</span> alcanzó
-                  <span className="text-music-accent font-semibold"> 15K seguidores</span>
-                  <span className="text-muted-foreground"> • hace 2 semanas</span>
-                </p>
-              </Card>
-            </div>
-          </TabsContent>
-        </Tabs>
-      </main>
-
-      <Footer />
-      <div className="h-16 md:hidden"></div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
