@@ -18,12 +18,20 @@ const buttonVariants = cva(
           "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
+        // Lobevol Musical Platform Variants
+        musical: "bg-gradient-primary text-white font-semibold hover:shadow-glow hover:scale-105 transition-all duration-300 music-glow",
+        accent: "bg-music-accent text-background font-semibold hover:bg-music-accent/90 hover:shadow-accent hover:scale-105 transition-all duration-300",
+        action: "bg-music-action text-white font-semibold hover:bg-music-action/90 hover:shadow-glow hover:scale-105 transition-all duration-300 animate-glow-pulse",
+        artist: "bg-card/50 backdrop-blur-sm border border-music-primary/20 text-foreground hover:bg-music-primary/10 hover:border-music-primary/40 transition-all duration-300",
+        compete: "bg-gradient-to-r from-music-primary to-music-accent text-white font-bold hover:shadow-glow hover:scale-110 transition-all duration-300 animate-float"
       },
       size: {
         default: "h-10 px-4 py-2",
         sm: "h-9 rounded-md px-3",
         lg: "h-11 rounded-md px-8",
         icon: "h-10 w-10",
+        hero: "h-14 px-10 text-lg font-bold",
+        xl: "h-16 px-12 text-xl font-bold"
       },
     },
     defaultVariants: {
