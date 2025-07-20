@@ -1,13 +1,43 @@
+import { useState, useEffect, useRef } from "react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Radio, Users, Heart, DollarSign, MessageCircle, Eye, Music, Mic } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Radio, Users, Heart, DollarSign, MessageCircle, Eye, Music, Mic, Play, Pause, Square, Send, Volume2, VolumeX } from "lucide-react";
+import { liveStreams, createLiveStream, endLiveStream, addLiveComment, addLiveReaction, incrementViewers, saveRecording } from "@/data/liveData";
+import { useAuth } from "@/context/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 import liveStreamImage from "@/assets/live-stream.jpg";
 
 const Live = () => {
-  const liveStreams = [
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [streamsData, setStreamsData] = useState(liveStreams);
+  const [currentComment, setCurrentComment] = useState('');
+  const [isRecording, setIsRecording] = useState(false);
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+  const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [selectedStream, setSelectedStream] = useState<string | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [volume, setVolume] = useState(1);
+  const [isMuted, setIsMuted] = useState(false);
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  const emojis = ['🎵', '👏', '🔥', '❤️', '💯', '🎤', '🎸', '🎧'];
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setStreamsData([...liveStreams]);
+    }, 2000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const mockLiveStreams = [
     {
       id: 1,
       artist: {
@@ -92,14 +122,143 @@ const Live = () => {
     }
   ];
 
-  const chatMessages = [
-    { user: "MusicFan23", message: "¡Increíble música! 🎵", donation: null },
-    { user: "BeatLover", message: "Donando $10", donation: "$10" },
-    { user: "ElectroNight", message: "Esta canción es perfecta 🔥", donation: null },
-    { user: "DanceQueen", message: "No puedo parar de bailar!", donation: null },
-    { user: "SupportMusic", message: "¡Sigue así! Donando $25", donation: "$25" },
-    { user: "NewFan", message: "Primera vez aquí, me encanta!", donation: null }
-  ];
+  const handleStartRecording = async () => {
+    if (!user) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Debes iniciar sesión para grabar.",
+      });
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          setAudioChunks(prev => [...prev, event.data]);
+        }
+      };
+
+      recorder.onstop = () => {
+        const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+        const audioUrl = URL.createObjectURL(audioBlob);
+        
+        // Save recording
+        saveRecording({
+          userId: user.id.toString(),
+          title: `Grabación ${new Date().toLocaleString()}`,
+          description: 'Grabación en vivo',
+          audioBlob,
+          audioUrl,
+          duration: recordingTime,
+          isPublic: true
+        });
+
+        toast({
+          title: "Grabación guardada",
+          description: "Tu grabación ha sido guardada exitosamente.",
+        });
+
+        // Create live stream
+        const newStream = createLiveStream({
+          title: `Live Session - ${user.username}`,
+          description: 'Sesión de música en vivo',
+          userId: user.id.toString(),
+          username: user.username,
+          genre: 'Live',
+          audioUrl
+        });
+
+        setStreamsData([...liveStreams]);
+        setAudioChunks([]);
+        setRecordingTime(0);
+      };
+
+      setMediaRecorder(recorder);
+      recorder.start();
+      setIsRecording(true);
+      setRecordingTime(0);
+      
+      recordingIntervalRef.current = setInterval(() => {
+        setRecordingTime(prev => prev + 1);
+      }, 1000);
+
+      toast({
+        title: "Grabación iniciada",
+        description: "Tu sesión en vivo ha comenzado.",
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "No se pudo acceder al micrófono.",
+      });
+    }
+  };
+
+  const handleStopRecording = () => {
+    if (mediaRecorder && isRecording) {
+      mediaRecorder.stop();
+      setIsRecording(false);
+      
+      if (recordingIntervalRef.current) {
+        clearInterval(recordingIntervalRef.current);
+      }
+
+      // Stop all tracks
+      mediaRecorder.stream.getTracks().forEach(track => track.stop());
+    }
+  };
+
+  const handleSendComment = (streamId: string) => {
+    if (!user || !currentComment.trim()) return;
+
+    addLiveComment(streamId, {
+      userId: user.id.toString(),
+      username: user.username,
+      message: currentComment,
+      timestamp: Date.now()
+    });
+
+    setCurrentComment('');
+    setStreamsData([...liveStreams]);
+  };
+
+  const handleAddReaction = (streamId: string, emoji: string) => {
+    if (!user) return;
+
+    addLiveReaction(streamId, user.id.toString(), user.username, emoji);
+    setStreamsData([...liveStreams]);
+
+    toast({
+      title: "Reacción enviada",
+      description: `Has reaccionado con ${emoji}`,
+    });
+  };
+
+  const handleJoinStream = (streamId: string) => {
+    if (!user) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Debes iniciar sesión para unirte.",
+      });
+      return;
+    }
+
+    incrementViewers(streamId);
+    setSelectedStream(streamId);
+    setStreamsData([...liveStreams]);
+  };
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -144,7 +303,7 @@ const Live = () => {
             <Card className="overflow-hidden bg-card/50 backdrop-blur-sm border-border">
               <div className="relative">
                 <img 
-                  src={liveStreams[0].thumbnail} 
+                  src={liveStreamImage} 
                   alt="Live Stream" 
                   className="w-full h-64 md:h-96 object-cover"
                 />
@@ -161,13 +320,13 @@ const Live = () => {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
                       <div className="w-12 h-12 bg-gradient-primary rounded-full flex items-center justify-center text-white font-bold">
-                        {liveStreams[0].artist.avatar}
+                        {streamsData[0]?.username.substring(0, 2).toUpperCase() || "LS"}
                       </div>
                       <div>
                         <h3 className="font-heading font-bold text-xl text-white">
-                          {liveStreams[0].title}
+                          {streamsData[0]?.title || "Live Stream"}
                         </h3>
-                        <p className="text-white/90 text-sm">{liveStreams[0].artist.name}</p>
+                        <p className="text-white/90 text-sm">{streamsData[0]?.username || "Artista"}</p>
                       </div>
                     </div>
                     <Button variant="musical" className="hover-glow">
@@ -183,20 +342,20 @@ const Live = () => {
                   <div className="flex items-center space-x-4">
                     <div className="flex items-center space-x-2 text-music-action">
                       <Eye className="w-5 h-5" />
-                      <span className="font-semibold">{liveStreams[0].viewers.toLocaleString()}</span>
+                      <span className="font-semibold">{streamsData[0]?.viewers.toLocaleString() || "0"}</span>
                     </div>
                     <div className="flex items-center space-x-2 text-music-accent">
                       <DollarSign className="w-5 h-5" />
-                      <span className="font-semibold">{liveStreams[0].donations}</span>
+                      <span className="font-semibold">$0</span>
                     </div>
-                    <Badge variant="secondary">{liveStreams[0].genre}</Badge>
+                    <Badge variant="secondary">{streamsData[0]?.genre || "Live"}</Badge>
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    {liveStreams[0].duration}
+                    {formatTime(Math.floor((Date.now() - (streamsData[0]?.startTime || Date.now())) / 1000))}
                   </div>
                 </div>
 
-                <p className="text-muted-foreground mb-6">{liveStreams[0].description}</p>
+                <p className="text-muted-foreground mb-6">{streamsData[0]?.description || "Transmisión en vivo"}</p>
 
                 <div className="flex flex-wrap gap-3">
                   <Button variant="action" className="hover-glow">
@@ -215,15 +374,54 @@ const Live = () => {
               </div>
             </Card>
 
+            {/* Live Recording Controls */}
+            <Card className="p-6 bg-gradient-glow border-music-primary/20">
+              <div className="space-y-4">
+                <div className="text-center">
+                  <Mic className="w-12 h-12 text-music-primary mx-auto mb-2" />
+                  <h3 className="font-heading font-bold text-lg">Grabación en Vivo</h3>
+                  {isRecording && (
+                    <p className="text-music-action font-semibold">
+                      Grabando: {formatTime(recordingTime)}
+                    </p>
+                  )}
+                </div>
+                
+                <div className="flex justify-center space-x-3">
+                  {!isRecording ? (
+                    <Button 
+                      onClick={handleStartRecording}
+                      variant="musical" 
+                      size="lg"
+                      className="hover-glow"
+                    >
+                      <Play className="w-5 h-5 mr-2" />
+                      Iniciar Grabación
+                    </Button>
+                  ) : (
+                    <Button 
+                      onClick={handleStopRecording}
+                      variant="destructive" 
+                      size="lg"
+                      className="animate-pulse"
+                    >
+                      <Square className="w-5 h-5 mr-2" />
+                      Parar Grabación
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </Card>
+
             {/* Other Live Streams */}
             <div className="space-y-4">
-              <h2 className="font-heading font-bold text-2xl">Otros Streams en Vivo</h2>
+              <h2 className="font-heading font-bold text-2xl">Streams en Vivo</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {liveStreams.slice(1).map((stream) => (
+                {streamsData.filter(s => s.isLive).map((stream) => (
                   <Card key={stream.id} className="overflow-hidden bg-card/50 backdrop-blur-sm border-border hover:border-music-primary/40 transition-all duration-300 cursor-pointer">
                     <div className="relative">
                       <img 
-                        src={stream.thumbnail} 
+                        src={liveStreamImage} 
                         alt={stream.title} 
                         className="w-full h-32 object-cover"
                       />
@@ -237,10 +435,40 @@ const Live = () => {
                     </div>
                     <div className="p-4">
                       <h3 className="font-semibold text-sm mb-1 line-clamp-1">{stream.title}</h3>
-                      <p className="text-xs text-muted-foreground mb-2">{stream.artist.name}</p>
+                      <p className="text-xs text-muted-foreground mb-2">{stream.username}</p>
                       <div className="flex items-center justify-between">
                         <Badge variant="secondary" className="text-xs">{stream.genre}</Badge>
-                        <span className="text-xs text-music-accent font-semibold">{stream.donations}</span>
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button 
+                              size="sm" 
+                              variant="musical"
+                              onClick={() => handleJoinStream(stream.id)}
+                            >
+                              Ver Stream
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                            <DialogHeader>
+                              <DialogTitle>{stream.title}</DialogTitle>
+                            </DialogHeader>
+                            <LiveStreamViewer 
+                              stream={stream}
+                              currentComment={currentComment}
+                              setCurrentComment={setCurrentComment}
+                              onSendComment={handleSendComment}
+                              onAddReaction={handleAddReaction}
+                              emojis={emojis}
+                              audioRef={audioRef}
+                              isPlaying={isPlaying}
+                              setIsPlaying={setIsPlaying}
+                              volume={volume}
+                              setVolume={setVolume}
+                              isMuted={isMuted}
+                              setIsMuted={setIsMuted}
+                            />
+                          </DialogContent>
+                        </Dialog>
                       </div>
                     </div>
                   </Card>
@@ -251,60 +479,55 @@ const Live = () => {
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* Live Chat */}
+            {/* Global Live Chat */}
             <Card className="p-4 bg-card/50 backdrop-blur-sm border-border">
               <h3 className="font-heading font-bold text-lg mb-4 flex items-center">
                 <MessageCircle className="w-5 h-5 text-music-accent mr-2" />
-                Chat en Vivo
+                Chat Global
               </h3>
               <div className="space-y-3 h-64 overflow-y-auto">
-                {chatMessages.map((msg, index) => (
-                  <div key={index} className="text-sm">
-                    <div className="flex items-center space-x-2 mb-1">
-                      <span className="font-semibold text-music-primary text-xs">{msg.user}</span>
-                      {msg.donation && (
-                        <Badge variant="destructive" className="text-xs bg-music-action">
-                          {msg.donation}
-                        </Badge>
+                {streamsData.map(stream => 
+                  stream.comments.slice(-3).map((comment) => (
+                    <div key={comment.id} className="text-sm">
+                      <div className="flex items-center space-x-2 mb-1">
+                        <Badge variant="outline" className="text-xs">{stream.title}</Badge>
+                        <span className="font-semibold text-music-primary text-xs">{comment.username}</span>
+                        {comment.emoji && (
+                          <span className="text-lg">{comment.emoji}</span>
+                        )}
+                      </div>
+                      {comment.message && (
+                        <p className="text-muted-foreground text-xs">{comment.message}</p>
                       )}
                     </div>
-                    <p className="text-muted-foreground text-xs">{msg.message}</p>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-4 flex space-x-2">
-                <input 
-                  type="text" 
-                  placeholder="Escribe un mensaje..."
-                  className="flex-1 px-3 py-2 bg-background border border-border rounded text-sm focus:outline-none focus:ring-2 focus:ring-music-primary"
-                />
-                <Button variant="musical" size="sm">
-                  Enviar
-                </Button>
+                  ))
+                )}
               </div>
             </Card>
 
-            {/* Upcoming Streams */}
+            {/* Recent Recordings */}
             <Card className="p-4 bg-card/50 backdrop-blur-sm border-border">
               <h3 className="font-heading font-bold text-lg mb-4 flex items-center">
                 <Music className="w-5 h-5 text-music-primary mr-2" />
-                Próximos Streams
+                Grabaciones Recientes
               </h3>
               <div className="space-y-4">
-                {upcomingStreams.map((stream) => (
+                {streamsData.slice(0, 3).map((stream) => (
                   <div key={stream.id} className="p-3 rounded-lg bg-muted/30 border border-border">
                     <div className="flex items-center space-x-3 mb-2">
                       <div className="w-8 h-8 bg-gradient-primary rounded-full flex items-center justify-center text-white text-xs font-bold">
-                        {stream.artist.avatar}
+                        {stream.username.substring(0, 2).toUpperCase()}
                       </div>
                       <div className="flex-1">
                         <h4 className="font-semibold text-sm">{stream.title}</h4>
-                        <p className="text-xs text-muted-foreground">{stream.artist.name}</p>
+                        <p className="text-xs text-muted-foreground">{stream.username}</p>
                       </div>
                     </div>
                     <div className="flex justify-between items-center text-xs">
                       <Badge variant="secondary">{stream.genre}</Badge>
-                      <span className="text-music-accent font-semibold">{stream.scheduledTime}</span>
+                      <span className="text-music-accent font-semibold">
+                        {stream.isLive ? 'En vivo' : 'Terminado'}
+                      </span>
                     </div>
                   </div>
                 ))}
@@ -330,6 +553,197 @@ const Live = () => {
 
       <Footer />
       <div className="h-16 md:hidden"></div>
+    </div>
+  );
+};
+
+// Live Stream Viewer Component
+const LiveStreamViewer = ({ 
+  stream, 
+  currentComment, 
+  setCurrentComment, 
+  onSendComment, 
+  onAddReaction, 
+  emojis,
+  audioRef,
+  isPlaying,
+  setIsPlaying,
+  volume,
+  setVolume,
+  isMuted,
+  setIsMuted
+}: any) => {
+  const { user } = useAuth();
+
+  const handlePlayPause = () => {
+    if (audioRef.current) {
+      if (isPlaying) {
+        audioRef.current.pause();
+      } else {
+        audioRef.current.play();
+      }
+      setIsPlaying(!isPlaying);
+    }
+  };
+
+  const handleVolumeChange = (newVolume: number) => {
+    setVolume(newVolume);
+    if (audioRef.current) {
+      audioRef.current.volume = newVolume;
+    }
+  };
+
+  const toggleMute = () => {
+    setIsMuted(!isMuted);
+    if (audioRef.current) {
+      audioRef.current.muted = !isMuted;
+    }
+  };
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Audio Player */}
+      <div className="lg:col-span-2 space-y-4">
+        <Card className="p-6">
+          <div className="space-y-4">
+            <div className="text-center">
+              <h3 className="text-xl font-bold">{stream.title}</h3>
+              <p className="text-muted-foreground">por {stream.username}</p>
+              <Badge variant="secondary" className="mt-2">{stream.genre}</Badge>
+            </div>
+
+            {/* Audio Element */}
+            {stream.audioUrl && (
+              <audio 
+                ref={audioRef}
+                src={stream.audioUrl}
+                onLoadedData={() => {
+                  if (audioRef.current) {
+                    audioRef.current.volume = volume;
+                    audioRef.current.muted = isMuted;
+                  }
+                }}
+              />
+            )}
+
+            {/* Audio Controls */}
+            <div className="flex items-center justify-center space-x-4">
+              <Button 
+                onClick={handlePlayPause}
+                variant="musical"
+                size="lg"
+                className="rounded-full w-16 h-16"
+              >
+                {isPlaying ? (
+                  <Pause className="w-8 h-8" />
+                ) : (
+                  <Play className="w-8 h-8" />
+                )}
+              </Button>
+            </div>
+
+            {/* Volume Control */}
+            <div className="flex items-center space-x-2">
+              <Button 
+                onClick={toggleMute}
+                variant="ghost"
+                size="sm"
+              >
+                {isMuted ? (
+                  <VolumeX className="w-4 h-4" />
+                ) : (
+                  <Volume2 className="w-4 h-4" />
+                )}
+              </Button>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.1"
+                value={volume}
+                onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
+                className="flex-1 h-2 bg-muted rounded-lg appearance-none cursor-pointer"
+              />
+            </div>
+
+            {/* Stream Info */}
+            <div className="grid grid-cols-2 gap-4 text-center">
+              <div>
+                <div className="text-lg font-bold text-music-action">{stream.viewers}</div>
+                <div className="text-xs text-muted-foreground">Oyentes</div>
+              </div>
+              <div>
+                <div className="text-lg font-bold text-music-primary">
+                  {stream.isLive ? 'EN VIVO' : 'GRABACIÓN'}
+                </div>
+                <div className="text-xs text-muted-foreground">Estado</div>
+              </div>
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      {/* Chat and Reactions */}
+      <div className="space-y-4">
+        {/* Emoji Reactions */}
+        <Card className="p-4">
+          <h4 className="font-semibold mb-3">Reacciones</h4>
+          <div className="grid grid-cols-4 gap-2">
+            {emojis.map((emoji) => (
+              <Button
+                key={emoji}
+                variant="ghost"
+                size="sm"
+                onClick={() => onAddReaction(stream.id, emoji)}
+                className="text-2xl p-2 h-auto"
+              >
+                {emoji}
+              </Button>
+            ))}
+          </div>
+        </Card>
+
+        {/* Live Chat */}
+        <Card className="p-4">
+          <h4 className="font-semibold mb-3 flex items-center">
+            <MessageCircle className="w-4 h-4 mr-2" />
+            Chat
+          </h4>
+          <div className="space-y-2 h-64 overflow-y-auto mb-4">
+            {stream.comments.map((comment: any) => (
+              <div key={comment.id} className="text-sm">
+                <div className="flex items-center space-x-2 mb-1">
+                  <span className="font-semibold text-music-primary text-xs">
+                    {comment.username}
+                  </span>
+                  {comment.emoji && (
+                    <span className="text-lg">{comment.emoji}</span>
+                  )}
+                </div>
+                {comment.message && (
+                  <p className="text-muted-foreground text-xs">{comment.message}</p>
+                )}
+              </div>
+            ))}
+          </div>
+          <div className="flex space-x-2">
+            <Input
+              placeholder="Escribe un comentario..."
+              value={currentComment}
+              onChange={(e) => setCurrentComment(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && onSendComment(stream.id)}
+              className="flex-1"
+            />
+            <Button 
+              size="sm"
+              onClick={() => onSendComment(stream.id)}
+              disabled={!currentComment.trim()}
+            >
+              <Send className="w-4 h-4" />
+            </Button>
+          </div>
+        </Card>
+      </div>
     </div>
   );
 };
