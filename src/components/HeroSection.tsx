@@ -1,8 +1,43 @@
 import { Button } from "@/components/ui/button";
 import { Play, Mic, Trophy, Users } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 import heroImage from "@/assets/hero-musicians.jpg";
 
 const HeroSection = () => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const { toast } = useToast();
+
+  const handleArtistClick = () => {
+    if (!user) {
+      toast({
+        title: "Inicia sesión",
+        description: "Necesitas una cuenta para acceder como artista.",
+      });
+      navigate('/login');
+    } else {
+      navigate('/live');
+    }
+  };
+
+  const handleFanClick = () => {
+    if (!user) {
+      toast({
+        title: "Inicia sesión",
+        description: "Necesitas una cuenta para acceder como fan.",
+      });
+      navigate('/login');
+    } else {
+      navigate('/community');
+    }
+  };
+
+  const handleDemoClick = () => {
+    navigate('/competitions');
+  };
+
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
       {/* Background Image with Overlay */}
@@ -44,11 +79,21 @@ const HeroSection = () => {
 
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <Button variant="musical" size="hero" className="hover-glow">
+            <Button 
+              variant="musical" 
+              size="hero" 
+              className="hover-glow"
+              onClick={handleArtistClick}
+            >
               <Mic className="w-6 h-6 mr-3" />
               Soy Artista
             </Button>
-            <Button variant="accent" size="hero" className="hover-glow">
+            <Button 
+              variant="accent" 
+              size="hero" 
+              className="hover-glow"
+              onClick={handleFanClick}
+            >
               <Users className="w-6 h-6 mr-3" />
               Soy Fan
             </Button>
@@ -56,12 +101,17 @@ const HeroSection = () => {
 
           {/* Demo Video Button */}
           <div className="pt-8">
-            <Button variant="ghost" size="lg" className="group hover-glow">
+            <Button 
+              variant="ghost" 
+              size="lg" 
+              className="group hover-glow"
+              onClick={handleDemoClick}
+            >
               <div className="flex items-center space-x-3">
                 <div className="w-12 h-12 bg-music-primary/20 rounded-full flex items-center justify-center group-hover:bg-music-primary/30 transition-colors">
                   <Play className="w-6 h-6 text-music-primary ml-1" />
                 </div>
-                <span className="text-lg font-medium">Ver Demo</span>
+                <span className="text-lg font-medium">Ver Competencias</span>
               </div>
             </Button>
           </div>

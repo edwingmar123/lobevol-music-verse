@@ -10,6 +10,7 @@ import { Radio, Users, Heart, DollarSign, MessageCircle, Eye, Music, Mic, Play, 
 import { liveStreams, createLiveStream, endLiveStream, addLiveComment, addLiveReaction, incrementViewers, saveRecording } from "@/data/liveData";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { simulateReactionDonation, createDonation, DONATION_AMOUNTS, donationStats } from "@/data/donationData";
 import liveStreamImage from "@/assets/live-stream.jpg";
 
 const Live = () => {
@@ -25,6 +26,8 @@ const Live = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
+  const [donationAmount, setDonationAmount] = useState(5);
+  const [totalDonations, setTotalDonations] = useState(donationStats.totalAmount);
   const audioRef = useRef<HTMLAudioElement>(null);
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -230,12 +233,26 @@ const Live = () => {
   const handleAddReaction = (streamId: string, emoji: string) => {
     if (!user) return;
 
+    const stream = liveStreams.find(s => s.id === streamId);
+    if (!stream) return;
+
     addLiveReaction(streamId, user.id.toString(), user.username, emoji);
     setStreamsData([...liveStreams]);
 
+    // Simulate donation for reaction
+    simulateReactionDonation(
+      user.id.toString(),
+      user.username,
+      stream.userId,
+      stream.username,
+      emoji
+    );
+
+    setTotalDonations(donationStats.totalAmount);
+
     toast({
       title: "Reacción enviada",
-      description: `Has reaccionado con ${emoji}`,
+      description: `Has reaccionado con ${emoji} y donado $${DONATION_AMOUNTS.reaction}`,
     });
   };
 
@@ -252,6 +269,68 @@ const Live = () => {
     incrementViewers(streamId);
     setSelectedStream(streamId);
     setStreamsData([...liveStreams]);
+  };
+
+  const handleLikeStream = () => {
+    if (!user) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Debes iniciar sesión para dar me gusta.",
+      });
+      return;
+    }
+
+    const stream = streamsData[0];
+    if (!stream) return;
+
+    // Simulate donation for like
+    simulateReactionDonation(
+      user.id.toString(),
+      user.username,
+      stream.userId,
+      stream.username,
+      '❤️'
+    );
+
+    setTotalDonations(donationStats.totalAmount);
+
+    toast({
+      title: "¡Me gusta enviado!",
+      description: `Has apoyado al artista con $${DONATION_AMOUNTS.reaction}`,
+    });
+  };
+
+  const handleDonateToStream = (amount: number) => {
+    if (!user) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Debes iniciar sesión para donar.",
+      });
+      return;
+    }
+
+    const stream = streamsData[0];
+    if (!stream) return;
+
+    // Create donation
+    createDonation(
+      user.id.toString(),
+      user.username,
+      stream.userId,
+      stream.username,
+      amount,
+      `¡Excelente música! Sigue así 🎵`,
+      'donation'
+    );
+
+    setTotalDonations(donationStats.totalAmount);
+
+    toast({
+      title: "¡Donación enviada!",
+      description: `Has donado $${amount} al artista`,
+    });
   };
 
   const formatTime = (seconds: number) => {
@@ -292,8 +371,8 @@ const Live = () => {
             <div className="text-sm text-muted-foreground">Artistas Activos</div>
           </Card>
           <Card className="p-6 text-center bg-card/50 backdrop-blur-sm border-border">
-            <div className="text-2xl font-bold text-music-action mb-2">$3.2K</div>
-            <div className="text-sm text-muted-foreground">Donaciones Hoy</div>
+                    <div className="text-2xl font-bold text-music-action mb-2">${totalDonations.toFixed(2)}</div>
+                    <div className="text-sm text-muted-foreground">Donaciones Totales</div>
           </Card>
         </div>
 
@@ -346,7 +425,7 @@ const Live = () => {
                     </div>
                     <div className="flex items-center space-x-2 text-music-accent">
                       <DollarSign className="w-5 h-5" />
-                      <span className="font-semibold">$0</span>
+                      <span className="font-semibold">${donationStats.totalAmount.toFixed(2)}</span>
                     </div>
                     <Badge variant="secondary">{streamsData[0]?.genre || "Live"}</Badge>
                   </div>
@@ -358,13 +437,21 @@ const Live = () => {
                 <p className="text-muted-foreground mb-6">{streamsData[0]?.description || "Transmisión en vivo"}</p>
 
                 <div className="flex flex-wrap gap-3">
-                  <Button variant="action" className="hover-glow">
+                  <Button 
+                    variant="action" 
+                    className="hover-glow"
+                    onClick={() => handleLikeStream()}
+                  >
                     <Heart className="w-4 h-4 mr-2" />
                     Me Gusta
                   </Button>
-                  <Button variant="accent" className="hover-glow">
+                  <Button 
+                    variant="accent" 
+                    className="hover-glow"
+                    onClick={() => handleDonateToStream(donationAmount)}
+                  >
                     <DollarSign className="w-4 h-4 mr-2" />
-                    Donar $5
+                    Donar ${donationAmount}
                   </Button>
                   <Button variant="ghost">
                     <MessageCircle className="w-4 h-4 mr-2" />

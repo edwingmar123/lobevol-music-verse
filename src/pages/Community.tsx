@@ -1,97 +1,152 @@
+import { useState } from "react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Heart, MessageCircle, Share2, Play, Music, Trophy, Users, Flame } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import { 
+  communityPosts, 
+  trendingTopics, 
+  suggestedArtists, 
+  likePost, 
+  followUser, 
+  createPost,
+  sharePost,
+  addComment 
+} from "@/data/communityData";
+import { simulateLikeDonation } from "@/data/donationData";
 
 const Community = () => {
-  // Mock data for the feed
-  const feedPosts = [
-    {
-      id: 1,
-      user: {
-        name: "María González",
-        username: "@mariasings",
-        avatar: "MG",
-        verified: true,
-        followers: "12.5K"
-      },
-      content: {
-        type: "music",
-        text: "Nueva canción que escribí anoche 🎵 ¿Qué opinan?",
-        audioTitle: "Corazón de Fuego",
-        duration: "3:42",
-        genre: "Pop Latino"
-      },
-      stats: {
-        likes: 1847,
-        comments: 234,
-        shares: 89
-      },
-      timestamp: "hace 2 horas"
-    },
-    {
-      id: 2,
-      user: {
-        name: "DJ Carlos Beat",
-        username: "@carlosbeat",
-        avatar: "CB",
-        verified: true,
-        followers: "25.8K"
-      },
-      content: {
-        type: "video",
-        text: "Live remix session desde mi estudio 🔥",
-        videoTitle: "Electronic Fusion Live",
-        duration: "15:32",
-        genre: "Electronic"
-      },
-      stats: {
-        likes: 3241,
-        comments: 567,
-        shares: 156
-      },
-      timestamp: "hace 4 horas"
-    },
-    {
-      id: 3,
-      user: {
-        name: "Ana Vocalist",
-        username: "@anavocals",
-        avatar: "AV",
-        verified: false,
-        followers: "8.2K"
-      },
-      content: {
-        type: "competition",
-        text: "¡Acabo de ganar la batalla de R&B! 🏆 Gracias por votar",
-        battleTitle: "R&B Vocal Battle #145",
-        rank: "1er Lugar",
-        genre: "R&B"
-      },
-      stats: {
-        likes: 892,
-        comments: 134,
-        shares: 45
-      },
-      timestamp: "hace 6 horas"
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [posts, setPosts] = useState(communityPosts);
+  const [artists, setArtists] = useState(suggestedArtists);
+  const [newPostContent, setNewPostContent] = useState('');
+
+  const handleLikePost = (postId: string) => {
+    if (!user) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Debes iniciar sesión para dar me gusta.",
+      });
+      return;
     }
-  ];
 
-  const trendingTopics = [
-    { name: "#FreestyleFriday", posts: "2.3K" },
-    { name: "#AcousticChallenge", posts: "1.8K" },
-    { name: "#LatinVibes", posts: "1.5K" },
-    { name: "#ElectronicNights", posts: "1.2K" },
-    { name: "#VocalPower", posts: "890" }
-  ];
+    const post = likePost(postId);
+    if (post) {
+      setPosts([...communityPosts]);
+      
+      // Simulate donation for like
+      if (post.stats.isLiked) {
+        simulateLikeDonation(
+          user.id.toString(),
+          user.username,
+          post.user.id,
+          post.user.name
+        );
+        
+        toast({
+          title: "¡Me gusta enviado!",
+          description: `Has apoyado a ${post.user.name} con $0.50`,
+        });
+      }
+    }
+  };
 
-  const suggestedArtists = [
-    { name: "Luis Rapper", username: "@luisrap", followers: "18.5K", genre: "Hip Hop" },
-    { name: "Sofia Jazz", username: "@sofiajazz", followers: "15.2K", genre: "Jazz" },
-    { name: "Rock Band XYZ", username: "@rockxyz", followers: "22.1K", genre: "Rock" }
-  ];
+  const handleFollowUser = (userId: string) => {
+    if (!user) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Debes iniciar sesión para seguir usuarios.",
+      });
+      return;
+    }
+
+    followUser(userId);
+    setPosts([...communityPosts]);
+    setArtists([...suggestedArtists]);
+    
+    const artist = suggestedArtists.find(a => a.id === userId);
+    toast({
+      title: artist?.isFollowing ? "Usuario seguido" : "Usuario no seguido",
+      description: artist?.isFollowing 
+        ? `Ahora sigues a ${artist.name}` 
+        : `Has dejado de seguir a ${artist?.name}`,
+    });
+  };
+
+  const handleCreatePost = () => {
+    if (!user) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Debes iniciar sesión para crear posts.",
+      });
+      return;
+    }
+
+    if (!newPostContent.trim()) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Escribe algo antes de publicar.",
+      });
+      return;
+    }
+
+    createPost(user.id.toString(), user.username, newPostContent);
+    setPosts([...communityPosts]);
+    setNewPostContent('');
+    
+    toast({
+      title: "Post publicado",
+      description: "Tu contenido ha sido compartido con la comunidad.",
+    });
+  };
+
+  const handleSharePost = (postId: string) => {
+    if (!user) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Debes iniciar sesión para compartir.",
+      });
+      return;
+    }
+
+    sharePost(postId);
+    setPosts([...communityPosts]);
+    
+    toast({
+      title: "Post compartido",
+      description: "Has compartido este contenido.",
+    });
+  };
+
+  const handleCommentPost = (postId: string) => {
+    if (!user) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Debes iniciar sesión para comentar.",
+      });
+      return;
+    }
+
+    addComment(postId);
+    setPosts([...communityPosts]);
+    
+    toast({
+      title: "Comentario agregado",
+      description: "Tu comentario ha sido publicado.",
+    });
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -124,19 +179,23 @@ const Community = () => {
                 Artistas Sugeridos
               </h3>
               <div className="space-y-4">
-                {suggestedArtists.map((artist, index) => (
-                  <div key={index} className="flex items-center justify-between">
+                {artists.map((artist) => (
+                  <div key={artist.id} className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
                       <div className="w-10 h-10 bg-gradient-primary rounded-full flex items-center justify-center text-white font-bold text-sm">
-                        {artist.name.split(' ').map(n => n[0]).join('')}
+                        {artist.avatar}
                       </div>
                       <div>
                         <p className="font-medium text-sm">{artist.name}</p>
                         <p className="text-xs text-muted-foreground">{artist.followers}</p>
                       </div>
                     </div>
-                    <Button variant="accent" size="sm">
-                      Seguir
+                    <Button 
+                      variant={artist.isFollowing ? "outline" : "accent"} 
+                      size="sm"
+                      onClick={() => handleFollowUser(artist.id)}
+                    >
+                      {artist.isFollowing ? "Siguiendo" : "Seguir"}
                     </Button>
                   </div>
                 ))}
@@ -153,10 +212,11 @@ const Community = () => {
                   TU
                 </div>
                 <div className="flex-1">
-                  <input 
-                    type="text" 
+                  <Input 
                     placeholder="¿Qué música estás creando hoy?"
-                    className="w-full bg-background border border-border rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-music-primary"
+                    value={newPostContent}
+                    onChange={(e) => setNewPostContent(e.target.value)}
+                    className="w-full"
                   />
                 </div>
               </div>
@@ -171,14 +231,18 @@ const Community = () => {
                     Video
                   </Button>
                 </div>
-                <Button variant="musical">
+                <Button 
+                  variant="musical"
+                  onClick={handleCreatePost}
+                  disabled={!newPostContent.trim()}
+                >
                   Publicar
                 </Button>
               </div>
             </Card>
 
             {/* Feed Posts */}
-            {feedPosts.map((post) => (
+            {posts.map((post) => (
               <Card key={post.id} className="p-6 bg-card/50 backdrop-blur-sm border-border hover:border-music-primary/20 transition-all duration-300">
                 {/* User Header */}
                 <div className="flex items-center justify-between mb-4">
@@ -204,8 +268,12 @@ const Community = () => {
                       </div>
                     </div>
                   </div>
-                  <Button variant="ghost" size="sm">
-                    Seguir
+                  <Button 
+                    variant={post.user.isFollowing ? "outline" : "ghost"} 
+                    size="sm"
+                    onClick={() => handleFollowUser(post.user.id)}
+                  >
+                    {post.user.isFollowing ? "Siguiendo" : "Seguir"}
                   </Button>
                 </div>
 
@@ -290,15 +358,30 @@ const Community = () => {
                 {/* Post Actions */}
                 <div className="flex items-center justify-between pt-4 border-t border-border">
                   <div className="flex items-center space-x-6">
-                    <Button variant="ghost" size="sm" className="flex items-center space-x-2 hover:text-music-action">
-                      <Heart className="w-5 h-5" />
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className={`flex items-center space-x-2 hover:text-music-action ${post.stats.isLiked ? 'text-music-action' : ''}`}
+                      onClick={() => handleLikePost(post.id)}
+                    >
+                      <Heart className={`w-5 h-5 ${post.stats.isLiked ? 'fill-current' : ''}`} />
                       <span>{post.stats.likes.toLocaleString()}</span>
                     </Button>
-                    <Button variant="ghost" size="sm" className="flex items-center space-x-2 hover:text-music-accent">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="flex items-center space-x-2 hover:text-music-accent"
+                      onClick={() => handleCommentPost(post.id)}
+                    >
                       <MessageCircle className="w-5 h-5" />
                       <span>{post.stats.comments}</span>
                     </Button>
-                    <Button variant="ghost" size="sm" className="flex items-center space-x-2 hover:text-music-primary">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="flex items-center space-x-2 hover:text-music-primary"
+                      onClick={() => handleSharePost(post.id)}
+                    >
                       <Share2 className="w-5 h-5" />
                       <span>{post.stats.shares}</span>
                     </Button>

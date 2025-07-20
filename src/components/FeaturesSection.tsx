@@ -1,46 +1,65 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Mic, Trophy, Radio, Heart, DollarSign, Users } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
 import competitionImage from "@/assets/competition-stage.jpg";
 import liveStreamImage from "@/assets/live-stream.jpg";
 
 const FeaturesSection = () => {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  const handleFeatureClick = (path: string, title: string) => {
+    toast({
+      title: `Navegando a ${title}`,
+      description: "Explora esta increíble característica",
+    });
+    navigate(path);
+  };
+
   const features = [
     {
       icon: Mic,
       title: "Publica tu Música",
       description: "Sube tus pistas, videos y contenido musical. Comparte tu arte con una comunidad apasionada.",
-      color: "music-primary"
+      color: "music-primary",
+      path: "/community"
     },
     {
       icon: Trophy,
       title: "Competencias Musicales",
       description: "Participa en batallas épicas, freestyle sessions y competencias por género musical.",
-      color: "music-action"
+      color: "music-action",
+      path: "/competitions"
     },
     {
       icon: Radio,
       title: "Transmisiones en Vivo",
       description: "Conecta en tiempo real con tu audiencia. Recibe donaciones y construye tu comunidad.",
-      color: "music-accent"
+      color: "music-accent",
+      path: "/live"
     },
     {
       icon: Heart,
       title: "Interacción Social",
       description: "Chat, reacciones y efectos visuales. Conecta con artistas y fans de todo el mundo.",
-      color: "music-primary"
+      color: "music-primary",
+      path: "/community"
     },
     {
       icon: DollarSign,
       title: "Monetiza tu Talento",
       description: "Recibe donaciones, gana en competencias y monetiza tu contenido musical.",
-      color: "music-action"
+      color: "music-action",
+      path: "/live"
     },
     {
       icon: Users,
       title: "Comunidad Global",
       description: "Únete a una red mundial de artistas emergentes y fanáticos de la música.",
-      color: "music-accent"
+      color: "music-accent",
+      path: "/community"
     }
   ];
 
@@ -68,7 +87,8 @@ const FeaturesSection = () => {
           {features.map((feature, index) => (
             <Card 
               key={index} 
-              className="p-6 bg-card/50 backdrop-blur-sm border-border hover:border-music-primary/40 transition-all duration-300 hover:shadow-card group hover-glow"
+              className="p-6 bg-card/50 backdrop-blur-sm border-border hover:border-music-primary/40 transition-all duration-300 hover:shadow-card group hover-glow cursor-pointer"
+              onClick={() => handleFeatureClick(feature.path, feature.title)}
             >
               <div className="space-y-4">
                 <div className={`w-12 h-12 rounded-lg bg-${feature.color}/20 flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
@@ -103,7 +123,12 @@ const FeaturesSection = () => {
                 <p className="text-white/90 mb-4">
                   Demuestra tu talento en batallas musicales con votación en tiempo real
                 </p>
-                <Button variant="action" size="sm" className="hover-glow">
+                <Button 
+                  variant="action" 
+                  size="sm" 
+                  className="hover-glow"
+                  onClick={() => handleFeatureClick('/competitions', 'Competencias')}
+                >
                   <Trophy className="w-4 h-4 mr-2" />
                   Competir Ahora
                 </Button>
@@ -127,7 +152,12 @@ const FeaturesSection = () => {
                 <p className="text-white/90 mb-4">
                   Conecta con tu audiencia en tiempo real y recibe donaciones
                 </p>
-                <Button variant="accent" size="sm" className="hover-glow">
+                <Button 
+                  variant="accent" 
+                  size="sm" 
+                  className="hover-glow"
+                  onClick={() => handleFeatureClick('/live', 'Transmisiones en Vivo')}
+                >
                   <Radio className="w-4 h-4 mr-2" />
                   Ir en Vivo
                 </Button>
@@ -145,11 +175,21 @@ const FeaturesSection = () => {
             Únete a miles de artistas que ya están construyendo su carrera en Lobevol.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button variant="musical" size="hero" className="hover-glow">
+            <Button 
+              variant="musical" 
+              size="hero" 
+              className="hover-glow"
+              onClick={() => handleFeatureClick('/register', 'Registro de Artista')}
+            >
               <Mic className="w-6 h-6 mr-3" />
               Comenzar como Artista
             </Button>
-            <Button variant="artist" size="hero" className="hover-glow">
+            <Button 
+              variant="accent" 
+              size="hero" 
+              className="hover-glow"
+              onClick={() => handleFeatureClick('/community', 'Comunidad')}
+            >
               <Users className="w-6 h-6 mr-3" />
               Explorar Comunidad
             </Button>
