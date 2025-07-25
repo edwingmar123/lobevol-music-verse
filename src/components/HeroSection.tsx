@@ -64,7 +64,7 @@ const HeroSection = () => {
           <div className="space-y-4">
             <h1 className="font-heading font-bold text-5xl md:text-7xl lg:text-8xl leading-tight">
               <span className="bg-gradient-primary bg-clip-text text-transparent">
-                Lobevol
+                MVP MUSIG SG
               </span>
             </h1>
             <h2 className="font-heading font-semibold text-2xl md:text-4xl lg:text-5xl text-foreground/90">
