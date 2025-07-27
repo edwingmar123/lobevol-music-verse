@@ -43,7 +43,7 @@ const Footer = () => {
               </div>
               <div>
                 <h3 className="font-heading font-bold text-2xl bg-gradient-primary bg-clip-text text-transparent">
-                  Lobevol
+                  MVP Miusic
                 </h3>
                 <p className="text-muted-foreground text-sm">Red Social Musical</p>
               </div>
